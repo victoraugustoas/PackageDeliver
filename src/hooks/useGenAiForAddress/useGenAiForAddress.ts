@@ -47,7 +47,7 @@ export function useGenAiForAddress() {
 
       try {
         const permissionStatus = await navigator.permissions.query({
-          name: "clipboard-write",
+          name: "clipboard-write" as PermissionName,
         });
         if (permissionStatus.state === "granted") {
           await navigator.clipboard.writeText(result);

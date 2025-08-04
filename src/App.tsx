@@ -1,9 +1,7 @@
-import { PhotoCamera } from "@mui/icons-material";
 import "./App.css";
 import { useGenAiForAddress } from "./hooks/useGenAiForAddress/useGenAiForAddress.ts";
-import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
 import { styled } from "@mui/material";
+import { CameraStream } from "./components/CameraStream/CameraStream.tsx";
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -22,25 +20,27 @@ function App() {
 
   return (
     <>
-      <Typography variant="h2">Identificador de endereços</Typography>
+      {/*<Typography variant="h2">Identificador de endereços</Typography>*/}
 
-      <Button
-        component="label"
-        role={undefined}
-        variant="contained"
-        tabIndex={-1}
-        startIcon={<PhotoCamera />}
-        loading={loading}
-      >
-        Enviar foto
-        <VisuallyHiddenInput
-          type="file"
-          onChange={(event) => getResultFromImages(event.target.files!)}
-          multiple
-        />
-      </Button>
+      {/*<Button*/}
+      {/*  component="label"*/}
+      {/*  role={undefined}*/}
+      {/*  variant="contained"*/}
+      {/*  tabIndex={-1}*/}
+      {/*  startIcon={<PhotoCamera />}*/}
+      {/*  loading={loading}*/}
+      {/*>*/}
+      {/*  Enviar foto*/}
+      {/*  <VisuallyHiddenInput*/}
+      {/*    type="file"*/}
+      {/*    onChange={(event) => getResultFromImages(event.target.files!)}*/}
+      {/*    multiple*/}
+      {/*  />*/}
+      {/*</Button>*/}
 
-      <Typography variant="h3">{result}</Typography>
+      {/*<Typography variant="h3">{result}</Typography>*/}
+
+      <CameraStream />
     </>
   );
 }
