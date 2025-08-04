@@ -2,10 +2,12 @@ import { createContext, type ReactNode, useContext } from "react";
 
 import { type FirebaseApp, initializeApp } from "firebase/app";
 import { type AI, getAI, GoogleAIBackend } from "firebase/ai";
+import { type Firestore, getFirestore } from "firebase/firestore";
 
 interface FirebaseContextState {
   firebase: FirebaseApp;
   googleAI: AI;
+  firestore: Firestore;
 }
 
 const firebaseConfig = {
@@ -30,9 +32,12 @@ export function useFirebase() {
 
 export function FirebaseProvider({ children }: { children: ReactNode }) {
   const ai = getAI(app, { backend: new GoogleAIBackend() });
+  const db = getFirestore(app);
 
   return (
-    <FirebaseContext.Provider value={{ firebase: app, googleAI: ai }}>
+    <FirebaseContext.Provider
+      value={{ firebase: app, googleAI: ai, firestore: db }}
+    >
       {children}
     </FirebaseContext.Provider>
   );

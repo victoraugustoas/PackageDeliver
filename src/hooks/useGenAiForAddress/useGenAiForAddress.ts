@@ -1,29 +1,34 @@
 import { AddressSchema } from "../../domain/Address.schema.ts";
-import { getGenerativeModel, type Part } from "firebase/ai";
+import { getGenerativeModel } from "firebase/ai";
 import { useFirebase } from "../../context/FirebaseContext.tsx";
 import { PromptAddress } from "../../domain/Prompt.ts";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Address } from "../../domain/Address.types.ts";
+import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
 
 async function fileToGenerativePart(file: File) {
   const base64EncodedDataPromise = new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onloadend = () => resolve((reader.result as string).split(",")[1]);
+    reader.onloadend = () => {
+      resolve(reader.result as string);
+    };
     reader.readAsDataURL(file);
   });
   return {
     inlineData: {
-      data: await base64EncodedDataPromise,
+      data: (await base64EncodedDataPromise) as string,
       mimeType: file.type,
     },
   };
 }
 
-export function useGenAiForAddress() {
+export function useGenAiForAddress({ roomId }: { roomId: string }) {
   const [loading, setLoading] = useState<boolean>(false);
-  const [results, setResults] = useState<{ address: string; file: File }[]>([]);
+  const [results, setResults] = useState<
+    { address: string; fileBase64: string }[]
+  >([]);
 
-  const { googleAI } = useFirebase();
+  const { googleAI, firestore } = useFirebase();
   const model = getGenerativeModel(googleAI, {
     model: "gemini-2.5-flash",
     generationConfig: {
@@ -42,7 +47,15 @@ export function useGenAiForAddress() {
         );
         const promptResults = await Promise.all(
           images.map((imagePart) =>
-            model.generateContent([PromptAddress, imagePart as Part]),
+            model.generateContent([
+              PromptAddress,
+              {
+                inlineData: {
+                  data: imagePart.inlineData.data.split(",")[1],
+                  mimeType: imagePart.inlineData.mimeType,
+                },
+              },
+            ]),
           ),
         );
 
@@ -51,9 +64,25 @@ export function useGenAiForAddress() {
         const addresses = promptResults.map((result) => {
           return toAddress(JSON.parse(result.response.text()));
         });
-        setResults(
-          addresses.map((address, index) => ({ address, file: files[index] })),
-        );
+        const results = addresses.map((address, index) => ({
+          address,
+          fileBase64: images[index].inlineData.data,
+        }));
+        setResults(results);
+
+        if (!roomId) return;
+        try {
+          const batch = writeBatch(firestore);
+          const collectionRef = collection(firestore, roomId);
+
+          for (const address of results) {
+            const newDocRef = doc(collectionRef); // Automatically generate document ID
+            batch.set(newDocRef, address);
+          }
+          await batch.commit();
+        } catch (e) {
+          console.error("Error adding document: ", e);
+        }
       } catch (e) {
         /* empty */
       } finally {
@@ -62,6 +91,30 @@ export function useGenAiForAddress() {
     },
     [model],
   );
+
+  useEffect(() => {
+    if (!roomId) return;
+
+    async function getRoomDocs() {
+      try {
+        console.log("getting room docs");
+        setLoading(true);
+        const querySnapshot = await getDocs(collection(firestore, roomId));
+        setResults(
+          querySnapshot.docs.map(
+            (doc) => doc.data() as { address: string; fileBase64: string },
+          ),
+        );
+        console.log("finished getting room docs");
+      } catch (e) {
+        /* empty */
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    getRoomDocs();
+  }, [firestore, roomId]);
 
   return { getResultFromImages, loading, results };
 }

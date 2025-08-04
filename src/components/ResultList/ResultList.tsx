@@ -5,18 +5,13 @@ import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
 import ListItemAvatar from "@mui/material/ListItemAvatar";
 import ListItemText from "@mui/material/ListItemText";
-import { useCallback, useEffect, useState } from "react";
-import { CircularProgress } from "@mui/material";
+import { useCallback } from "react";
 
 interface ResultListProps {
-  results: { address: string; file: File }[];
+  results: { address: string; fileBase64: string }[];
 }
 
 export function ResultList(props: ResultListProps) {
-  const [loading, setLoading] = useState<boolean>(true);
-  const [address, setAddress] =
-    useState<{ address: string; fileSrc: string }[]>();
-
   const onCopy = useCallback(async (result: string) => {
     try {
       await navigator.clipboard.writeText(result);
@@ -25,35 +20,9 @@ export function ResultList(props: ResultListProps) {
     }
   }, []);
 
-  const formatAddress = useCallback(async () => {
-    const addresses = await Promise.all(
-      props.results.map(async (item) => {
-        const src = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = (e) => {
-            resolve(e.target?.result);
-          };
-          reader.readAsDataURL(item.file);
-        });
-        return {
-          address: item.address,
-          fileSrc: src as string,
-        };
-      }),
-    );
-    setAddress(addresses);
-  }, [props.results]);
-
-  useEffect(() => {
-    setLoading(true);
-    formatAddress().then(() => setLoading(false));
-  }, [formatAddress]);
-
-  return loading ? (
-    <CircularProgress />
-  ) : (
+  return (
     <List>
-      {address!.map((item) => (
+      {props.results.map((item) => (
         <ListItem
           key={item.address}
           secondaryAction={
@@ -66,7 +35,7 @@ export function ResultList(props: ResultListProps) {
           }
         >
           <ListItemAvatar>
-            <Avatar src={item.fileSrc} />
+            <Avatar src={item.fileBase64} />
           </ListItemAvatar>
 
           <address>

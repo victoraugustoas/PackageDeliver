@@ -3,8 +3,9 @@ import "./App.css";
 import { useGenAiForAddress } from "./hooks/useGenAiForAddress/useGenAiForAddress.ts";
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import { styled } from "@mui/material";
+import { styled, TextField } from "@mui/material";
 import { ResultList } from "./components/ResultList/ResultList.tsx";
+import { useState } from "react";
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -19,11 +20,25 @@ const VisuallyHiddenInput = styled("input")({
 });
 
 function App() {
-  const { getResultFromImages, loading, results } = useGenAiForAddress();
+  const [roomId, setRoomId] = useState<string>("");
+  const { getResultFromImages, loading, results } = useGenAiForAddress({
+    roomId,
+  });
+
+  console.log(results);
 
   return (
     <>
-      <Typography variant="h2">Identificador de endereços</Typography>
+      <Typography variant="h3">Identificador de endereços</Typography>
+
+      <div style={{ marginBottom: "1rem", marginTop: "1rem" }}>
+        <TextField
+          id="outlined-basic"
+          label="Room ID"
+          variant="outlined"
+          onChange={(event) => setRoomId(event.target.value)}
+        />
+      </div>
 
       <Button
         component="label"
