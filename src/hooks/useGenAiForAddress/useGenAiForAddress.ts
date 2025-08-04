@@ -4,7 +4,13 @@ import { useFirebase } from "../../context/FirebaseContext.tsx";
 import { PromptAddress } from "../../domain/Prompt.ts";
 import { useCallback, useEffect, useState } from "react";
 import type { Address } from "../../domain/Address.types.ts";
-import { collection, doc, getDocs, writeBatch } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  query,
+  writeBatch,
+} from "firebase/firestore";
 
 async function fileToGenerativePart(file: File) {
   const base64EncodedDataPromise = new Promise((resolve) => {
@@ -74,10 +80,9 @@ export function useGenAiForAddress({ roomId }: { roomId: string }) {
         try {
           const batch = writeBatch(firestore);
           const collectionRef = collection(firestore, roomId);
-
           for (const address of results) {
-            const newDocRef = doc(collectionRef); // Automatically generate document ID
-            batch.set(newDocRef, address);
+            const newDocRef = doc(collectionRef, address.address); // Automatically generate document ID
+            batch.set(newDocRef, { address: address.address });
           }
           await batch.commit();
         } catch (e) {
@@ -89,7 +94,7 @@ export function useGenAiForAddress({ roomId }: { roomId: string }) {
         setLoading(false);
       }
     },
-    [model],
+    [firestore, model, roomId],
   );
 
   useEffect(() => {
@@ -99,12 +104,14 @@ export function useGenAiForAddress({ roomId }: { roomId: string }) {
       try {
         console.log("getting room docs");
         setLoading(true);
-        const querySnapshot = await getDocs(collection(firestore, roomId));
-        setResults(
-          querySnapshot.docs.map(
-            (doc) => doc.data() as { address: string; fileBase64: string },
-          ),
-        );
+        const q = query(collection(firestore, roomId));
+        onSnapshot(q, (querySnapshot) => {
+          setResults(
+            querySnapshot.docs.map(
+              (doc) => doc.data() as { address: string; fileBase64: string },
+            ),
+          );
+        });
         console.log("finished getting room docs");
       } catch (e) {
         /* empty */
