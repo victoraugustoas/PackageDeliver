@@ -5,23 +5,23 @@ import { PromptAddress } from "../../domain/Prompt.ts";
 import { useCallback, useState } from "react";
 import type { Address } from "../../domain/Address.types.ts";
 
-async function fileToGenerativePart(file: FileList) {
+async function fileToGenerativePart(file: File) {
   const base64EncodedDataPromise = new Promise((resolve) => {
     const reader = new FileReader();
     reader.onloadend = () => resolve((reader.result as string).split(",")[1]);
-    reader.readAsDataURL(file[0]);
+    reader.readAsDataURL(file);
   });
   return {
     inlineData: {
       data: await base64EncodedDataPromise,
-      mimeType: file[0].type,
+      mimeType: file.type,
     },
   };
 }
 
 export function useGenAiForAddress() {
   const [loading, setLoading] = useState<boolean>(false);
-  const [result, setResult] = useState<string>("");
+  const [results, setResults] = useState<{ address: string; file: File }[]>([]);
 
   const { googleAI } = useFirebase();
   const model = getGenerativeModel(googleAI, {
@@ -35,32 +35,33 @@ export function useGenAiForAddress() {
   const getResultFromImages = useCallback(
     async (files: FileList) => {
       setLoading(true);
-      const imagePart = await fileToGenerativePart(files);
-      const promptResult = await model.generateContent([
-        PromptAddress,
-        imagePart as Part,
-      ]);
-
-      const response = promptResult.response;
-      const address: Address = JSON.parse(response.text());
-      const result = `${address.address}, ${address.number}, ${address.neighborhood}, ${address.city}`;
 
       try {
-        const permissionStatus = await navigator.permissions.query({
-          name: "clipboard-write" as PermissionName,
+        const images = await Promise.all(
+          Array.from(files).map(fileToGenerativePart),
+        );
+        const promptResults = await Promise.all(
+          images.map((imagePart) =>
+            model.generateContent([PromptAddress, imagePart as Part]),
+          ),
+        );
+
+        const toAddress = (address: Address) =>
+          `${address.address}, ${address.number}, ${address.neighborhood}, ${address.city}`;
+        const addresses = promptResults.map((result) => {
+          return toAddress(JSON.parse(result.response.text()));
         });
-        if (permissionStatus.state === "granted") {
-          await navigator.clipboard.writeText(result);
-        }
+        setResults(
+          addresses.map((address, index) => ({ address, file: files[index] })),
+        );
       } catch (e) {
         /* empty */
+      } finally {
+        setLoading(false);
       }
-
-      setResult(result);
-      setLoading(false);
     },
     [model],
   );
 
-  return { getResultFromImages, loading, result };
+  return { getResultFromImages, loading, results };
 }

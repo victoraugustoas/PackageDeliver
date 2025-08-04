@@ -4,6 +4,7 @@ import { useGenAiForAddress } from "./hooks/useGenAiForAddress/useGenAiForAddres
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import { styled } from "@mui/material";
+import { ResultList } from "./components/ResultList/ResultList.tsx";
 
 const VisuallyHiddenInput = styled("input")({
   clip: "rect(0 0 0 0)",
@@ -18,7 +19,7 @@ const VisuallyHiddenInput = styled("input")({
 });
 
 function App() {
-  const { getResultFromImages, loading, result } = useGenAiForAddress();
+  const { getResultFromImages, loading, results } = useGenAiForAddress();
 
   return (
     <>
@@ -40,7 +41,7 @@ function App() {
         />
       </Button>
 
-      <Typography variant="h3">{result}</Typography>
+      <ResultList results={results} />
     </>
   );
 }
